@@ -18,14 +18,22 @@ FetchContent_MakeAvailable(raylib)
 set(SOURCES
     src/core/scorpion.cpp
     src/render/renderer.cpp
-    src/foundation/memory/allocator.c)
+    src/foundation/memory/allocator.c
+        src/core/actor.cpp
+        src/core/scene.cpp)
 
 set(HEADERS
     include/scorpion/core/scorpion.h
     include/scorpion/core/api.h
     include/scorpion/util/timer.h
     include/scorpion/render/renderer.h
-    include/scorpion/foundation/memory/allocator.h)
+    include/scorpion/foundation/memory/allocator.h
+        include/scorpion/core/actor.h
+        include/scorpion/core/component.h
+        include/scorpion/util/std_types.h
+        include/scorpion/core/scene.h
+        include/scorpion/engine_std/transform.h
+        include/scorpion/util/math.h)
 
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})
 

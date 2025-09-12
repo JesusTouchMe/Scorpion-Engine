@@ -17,6 +17,9 @@ namespace scorpion {
         Timer<> updateTimer;
         Timer<> renderTimer;
 
+        HashMap<uint32_t, UniquePtr<Scene>> scenes;
+        Scene* activeScene;
+
         void setTargetFPS(int fps) {
             targetFPS = fps;
             renderInterval = 1.0 / fps;
@@ -25,6 +28,19 @@ namespace scorpion {
         void setTargetTPS(int tps) {
             targetTPS = tps;
             updateInterval = 1.0 / tps;
+        }
+
+        Scene* createScene(uint32_t id) {
+            UniquePtr<Scene> scene = MakeUnique<Scene>();
+            Scene* ptr = scene.get();
+
+            scenes[id] = std::move(scene);
+
+            return ptr;
+        }
+
+        void setActiveScene(uint32_t id) {
+            activeScene = scenes.at(id).get();
         }
 
         bool shouldRun() {
@@ -50,8 +66,8 @@ namespace scorpion {
         }
 
         void update() {
-            auto tick = [] {
-                //TODO: run engine tick
+            auto tick = [this] {
+                if (activeScene != nullptr) activeScene->update(updateInterval);
             };
 
             if (targetTPS == 0) {
@@ -79,6 +95,7 @@ namespace scorpion {
     static EngineCore core;
 
     void Run() {
+        //TODO: make a function that blocks until the next thing (update/render) should run
         while (ShouldRun()) {
             if (ShouldUpdate()) Update();
             if (ShouldRender()) Render();
@@ -91,6 +108,26 @@ namespace scorpion {
 
     void SetTargetTPS(int tps) {
         core.setTargetTPS(tps);
+    }
+
+    Scene* CreateScene(uint32_t id) {
+        return core.createScene(id);
+    }
+
+    Scene* GetActiveScene() {
+        return core.activeScene;
+    }
+
+    void SetActiveScene(uint32_t id) {
+        core.setActiveScene(id);
+    }
+
+    Actor* CreateActor() {
+        return core.activeScene->addActor<Actor>();
+    }
+
+    void DestroyActor(Actor* actor) {
+        actor->getScene()->removeActor(actor);
     }
 
     bool ShouldRun() {

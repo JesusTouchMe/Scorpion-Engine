@@ -70,6 +70,23 @@ namespace scorpion::memory {
             ScorpionHeapFree(p);
         }
     };
+
+    template<typename T>
+    struct StdHeapDeleter {
+        void operator()(T* ptr) const {
+            if (ptr != nullptr) {
+                ptr->~T();
+                StdHeapAllocator<T> alloc;
+                alloc.deallocate(ptr, 1);
+            }
+        }
+    };
+
+    template<typename T, typename U>
+    bool operator==(const StdHeapAllocator<T>&, const StdHeapAllocator<U>&) { return true; }
+
+    template<typename T, typename U>
+    bool operator!=(const StdHeapAllocator<T>&, const StdHeapAllocator<U>&) { return false; }
 }
 #endif
 
