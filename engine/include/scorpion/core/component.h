@@ -3,10 +3,16 @@
 #ifndef SCORPION_COMPONENT_H
 #define SCORPION_COMPONENT_H 1
 
+#include <utility>
+
+#include "scorpion/core/api.h"
+
+#include "scorpion/render/renderer.h"
+
 namespace scorpion {
     class Actor;
 
-    class Component {
+    class SCORPION_API Component {
     friend class Actor;
     public:
         explicit Component(Actor* owner) : mOwner(owner) {}
@@ -27,11 +33,35 @@ namespace scorpion {
         bool mStarted = false;
     };
 
-    class RenderableComponent : public Component {
+    class SCORPION_API RenderableComponent : public Component {
     public:
-        using Component::Component;
+        enum class Layer {
+            World2D,
+            World3D,
+            UI
+        };
+
+        RenderableComponent(Actor* owner, Layer layer) : Component(owner), mLayer(layer) {}
 
         virtual void onRender() = 0;
+
+        void beginShader();
+        void endShader();
+
+        Layer getLayer() const { return mLayer; }
+
+        SharedPtr<render::Shader> getShader() const { return mShader; }
+        void setShader(SharedPtr<render::Shader> shader) { mShader = std::move(shader); }
+
+    protected:
+        virtual void beginShader0() {}
+        virtual void endShader0() {}
+
+        render::Shader* shader() const { return mShader.get(); }
+
+    private:
+        Layer mLayer;
+        SharedPtr<render::Shader> mShader;
     };
 }
 

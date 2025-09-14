@@ -5,8 +5,10 @@
 
 #include "scorpion/core/actor.h"
 
+#include "scorpion/engine_std/camera.h"
+
 namespace scorpion {
-    class Scene {
+    class SCORPION_API Scene {
     public:
         void update(double dt);
         void render();
@@ -23,10 +25,15 @@ namespace scorpion {
 
         bool removeActor(Actor* actor);
 
+        components::Camera* getActiveCamera() const { return mActiveCamera; }
+        void setActiveCamera(components::Camera* camera) { mActiveCamera = camera;  }
+
         void reset();
 
     private:
         Vector<UniquePtr<Actor>> mActors;
+
+        components::Camera* mActiveCamera = nullptr;
     };
 }
 

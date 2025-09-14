@@ -8,6 +8,8 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
+#include <type_traits>
+
 extern "C" {
 #endif
 
@@ -41,7 +43,7 @@ namespace scorpion::memory {
         }
 
         void reset() {
-            ScorpionResetArena(mArena);
+            ScorpionArenaReset(mArena);
         }
 
         void* allocate(size_t size) {
@@ -73,6 +75,11 @@ namespace scorpion::memory {
 
     template<typename T>
     struct StdHeapDeleter {
+        StdHeapDeleter() = default;
+
+        template<typename U, typename = std::_Require<std::is_convertible<U*, T*>>>
+        StdHeapDeleter(const StdHeapDeleter<U>&) noexcept {}
+
         void operator()(T* ptr) const {
             if (ptr != nullptr) {
                 ptr->~T();

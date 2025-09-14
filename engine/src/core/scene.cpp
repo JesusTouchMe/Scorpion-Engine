@@ -2,6 +2,8 @@
 
 #include "scorpion/core/scene.h"
 
+#include "scorpion/render/renderer.h"
+
 namespace scorpion {
     void Scene::update(double dt) {
         for (auto& actor: mActors) {
@@ -17,9 +19,28 @@ namespace scorpion {
     }
 
     void Scene::render() {
-        for (auto& actor : mActors) {
-            if (actor->isActive()) actor->render();
+        render::BeginDrawing();
+        render::ClearWindow();
+
+        if (mActiveCamera != nullptr) {
+            mActiveCamera->syncWithTransform();
+
+            render::Begin3D(mActiveCamera->position, mActiveCamera->target, mActiveCamera->up, mActiveCamera->fovY, static_cast<int>(mActiveCamera->projection));
+            for (auto& actor: mActors) {
+                if (actor->isActive()) actor->renderPass(RenderableComponent::Layer::World3D);
+            }
+            render::End3D();
         }
+
+        for (auto& actor : mActors) {
+            if (actor->isActive()) actor->renderPass(RenderableComponent::Layer::World2D);
+        }
+
+        for (auto& actor : mActors) {
+            if (actor->isActive()) actor->renderPass(RenderableComponent::Layer::UI);
+        }
+
+        render::EndDrawing();
     }
 
     bool Scene::removeActor(Actor* actor) {

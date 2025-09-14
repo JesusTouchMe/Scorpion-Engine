@@ -20,7 +20,12 @@ set(SOURCES
     src/render/renderer.cpp
     src/foundation/memory/allocator.c
         src/core/actor.cpp
-        src/core/scene.cpp)
+        src/core/scene.cpp
+    src/engine_std/transform.cpp
+    src/engine_std/camera.cpp
+    src/engine_std/cube_renderer.cpp
+    src/util/actor_factory.cpp
+    src/core/component.cpp)
 
 set(HEADERS
     include/scorpion/core/scorpion.h
@@ -33,7 +38,11 @@ set(HEADERS
         include/scorpion/util/std_types.h
         include/scorpion/core/scene.h
         include/scorpion/engine_std/transform.h
-        include/scorpion/util/math.h)
+        include/scorpion/util/math.h
+    include/scorpion/util/lazy.h
+    include/scorpion/engine_std/camera.h
+    include/scorpion/engine_std/cube_renderer.h
+    include/scorpion/util/actor_factory.h)
 
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})
 

@@ -12,10 +12,10 @@
 namespace scorpion {
     class Scene;
 
-    class Actor {
+    class SCORPION_API Actor {
     friend class Scene;
     public:
-        explicit Actor(Scene* scene) : mScene(scene) {}
+        explicit Actor(Scene* scene);
         virtual ~Actor();
 
         virtual void onStart() {}
@@ -29,8 +29,8 @@ namespace scorpion {
                 return static_cast<T*>(mComponents[type].get());
             }
 
-            UniquePtr<T> component = MakeUnique<T>(this, std::forward<Args>(args)...);
-            T* ptr = component.get();
+            UniquePtr<Component> component = MakeUnique<T>(this, std::forward<Args>(args)...);
+            T* ptr = static_cast<T*>(component.get());
 
             mComponents[type] = std::move(component);
 
@@ -56,6 +56,8 @@ namespace scorpion {
             return false;
         }
 
+        void applyShader(const SharedPtr<render::Shader>& shader);
+
         Scene* getScene() const { return mScene; }
 
         bool isActive() const { return mActive; }
@@ -69,7 +71,7 @@ namespace scorpion {
         HashMap<std::type_index, UniquePtr<Component>> mComponents;
 
         void update(double dt);
-        void render();
+        void renderPass(RenderableComponent::Layer pass);
     };
 }
 

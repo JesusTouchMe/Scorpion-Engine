@@ -83,12 +83,7 @@ namespace scorpion {
         }
 
         void render() {
-            BeginDrawing();
-            ClearBackground(BLACK);
-
-            //TODO: draw frame
-
-            EndDrawing();
+            if (activeScene != nullptr) activeScene->render();
         }
     };
 
