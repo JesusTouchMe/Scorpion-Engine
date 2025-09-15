@@ -240,6 +240,18 @@ namespace scorpion::render {
         return shader;
     }
 
+    bool IsCursorVisible() {
+        return !::IsCursorHidden();
+    }
+
+    void SetCursorVisible(bool visible) {
+        if (visible) {
+            if (!IsCursorVisible()) ::EnableCursor();
+        } else {
+            if (IsCursorVisible()) ::DisableCursor();
+        }
+    }
+
     void BeginDrawing() {
         ::BeginDrawing();
     }

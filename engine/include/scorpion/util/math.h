@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <numbers>
 
 namespace scorpion::math {
     struct Matrix4;
@@ -97,6 +98,48 @@ namespace scorpion::math {
             return {x / scale, y / scale, z / scale};
         }
 
+        Vec3& operator+=(const Vec3& other) {
+            x += other.x;
+            y += other.y;
+            z += other.z;
+            return *this;
+        }
+
+        Vec3& operator-=(const Vec3& other) {
+            x -= other.x;
+            y -= other.y;
+            z -= other.z;
+            return *this;
+        }
+
+        Vec3& operator*=(const Vec3& other) {
+            x *= other.x;
+            y *= other.y;
+            z *= other.z;
+            return *this;
+        }
+
+        Vec3& operator*=(float scale) {
+            x *= scale;
+            y *= scale;
+            z *= scale;
+            return *this;
+        }
+
+        Vec3& operator/=(const Vec3& other) {
+            x /= other.x;
+            y /= other.y;
+            z /= other.z;
+            return *this;
+        }
+
+        Vec3& operator/=(float scale) {
+            x /= scale;
+            y /= scale;
+            z /= scale;
+            return *this;
+        }
+
         float length() const { return std::sqrt(x * x + y * y + z * z); }
         float lengthSquared() const { return x * x + y * y + z * z; }
 
@@ -113,6 +156,51 @@ namespace scorpion::math {
                 z * v.x - x * v.z,
                 x * v.y - y * v.x
             };
+        }
+
+        float angle(const Vec3& targetPos) const {
+            float result = 0.0f;
+
+            Vec3 cross = this->cross(targetPos);
+            float len = cross.length();
+            float dot = this->dot(targetPos);
+            result = std::atan2(len, dot);
+
+            return result;
+        }
+
+        Vec3 rotateByAxisAngle(Vec3 axis, float angle) const {
+            Vec3 result = *this;
+
+            float length = axis.length();
+            if (length == 0.0f) length = 1.0f;
+
+            float ilength = 1.0f / length;
+            axis.x *= ilength;
+            axis.y *= ilength;
+            axis.z *= ilength;
+
+            angle /= 2.0f;
+            float a = std::sin(angle);
+            float b = axis.x * a;
+            float c = axis.y * a;
+            float d = axis.z * a;
+            a = std::cos(angle);
+            Vec3 w = {b, c, d};
+            Vec3 wv = w.cross(*this);
+            Vec3 wwv = w.cross(wv);
+
+            a *= 2;
+            wv.x *= a;
+            wv.y *= a;
+            wv.z *= a;
+
+            wwv *= 2;
+
+            result += wv;
+            result += wwv;
+
+            return result;
         }
     };
 
@@ -323,6 +411,20 @@ namespace scorpion::math {
             for (int i = 0; i < 16; i++) m[i] = 0;
         }
 
+        Matrix4 operator*(const Matrix4& other) const {
+            Matrix4 result;
+            for (int row = 0; row < 4; ++row) {
+                for (int col = 0; col < 4; ++col) {
+                    result.m[col + row*4] =
+                        m[row*4 + 0] * other.m[col + 0] +
+                        m[row*4 + 1] * other.m[col + 4] +
+                        m[row*4 + 2] * other.m[col + 8] +
+                        m[row*4 + 3] * other.m[col + 12];
+                }
+            }
+            return result;
+        }
+
         static Matrix4 identity() {
             Matrix4 matrix;
             matrix.m[0] = matrix.m[5] = matrix.m[10] = matrix.m[15] = 1;
@@ -381,18 +483,52 @@ namespace scorpion::math {
             return matrix;
         }
 
-        Matrix4 operator*(const Matrix4& other) const {
+        static Matrix4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up) {
             Matrix4 result;
-            for (int row = 0; row < 4; ++row) {
-                for (int col = 0; col < 4; ++col) {
-                    result.m[col + row*4] =
-                        m[row*4 + 0] * other.m[col + 0] +
-                        m[row*4 + 1] * other.m[col + 4] +
-                        m[row*4 + 2] * other.m[col + 8] +
-                        m[row*4 + 3] * other.m[col + 12];
-                }
-            }
-            return result;
+
+            float length = 0.0f;
+            float ilength = 0.0f;
+
+            Vec3 vz = eye - target;
+            Vec3 v = vz;
+
+            length = v.length();
+            if (length == 0.0f) length = 1.0f;
+
+            ilength = 1.0f / length;
+            vz.x *= ilength;
+            vz.y *= ilength;
+            vz.z *= ilength;
+
+            Vec3 vx = up.cross(vz);
+            v = vx;
+
+            length = v.length();
+            if (length == 0.0f) length = 1.0f;
+
+            ilength = 1.0f / length;
+            vx.x *= ilength;
+            vx.y *= ilength;
+            vx.z *= ilength;
+
+            Vec3 vy = vz.cross(vx);
+
+            result.m[0] = vx.x;
+            result.m[1] = vy.x;
+            result.m[2] = vz.x;
+            result.m[3] = 0.0f;
+            result.m[4] = vx.y;
+            result.m[5] = vy.y;
+            result.m[6] = vz.y;
+            result.m[7] = 0.0f;
+            result.m[8] = vx.z;
+            result.m[9] = vy.z;
+            result.m[10] = vz.z;
+            result.m[11] = 0.0f;
+            result.m[12] = -vx.dot(eye);
+            result.m[13] = -vy.dot(eye);
+            result.m[14] = -vz.dot(eye);
+            result.m[15] = 1.0f;
         }
     };
 
@@ -484,6 +620,14 @@ namespace scorpion::math {
     inline const Color Color::gold = {255, 215, 0, 255};
     inline const Color Color::lime = {50, 205, 50, 255};
     inline const Color Color::skyBlue = {135, 206, 235, 255};
+
+    constexpr inline float Deg2Rad(float deg) {
+        return deg * static_cast<float>(std::numbers::pi) / 180.0f;
+    }
+
+    constexpr inline double Deg2Rad(double deg) {
+        return deg * std::numbers::pi / 180.0;
+    }
 }
 
 #endif //SCORPION_MATH_H

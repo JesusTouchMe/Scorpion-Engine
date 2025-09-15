@@ -12,4 +12,15 @@ namespace scorpion::components {
 
         position = transform->position;
     }
+
+    math::Vec3 Camera::forward() const {
+        return (target - position).normalized();
+    }
+
+    math::Vec3 Camera::right() const {
+        math::Vec3 forward = this->forward();
+        math::Vec3 up = this->up.normalized();
+
+        return forward.cross(up).normalized();
+    }
 }

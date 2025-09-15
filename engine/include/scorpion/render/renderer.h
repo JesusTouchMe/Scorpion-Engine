@@ -45,6 +45,9 @@ namespace scorpion::render {
 
     SCORPION_API SharedPtr<Shader> CompileShader(const char* vShaderCode, const char* fShaderCode);
 
+    SCORPION_API bool IsCursorVisible();
+    SCORPION_API void SetCursorVisible(bool visible);
+
     SCORPION_API void BeginDrawing();
     SCORPION_API void EndDrawing();
 

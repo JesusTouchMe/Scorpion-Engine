@@ -20,12 +20,9 @@ namespace scorpion::components {
     }
 
     void CubeRenderer::beginShader0() {
-        math::Vec3 lightDir = math::Vec3(10, 10, 10).normalized();
-        math::Vec3 lightColor = math::Vec3(1, 1, 0.9f);
+        math::Matrix4 model = math::Matrix4::identity();
+        math::Matrix4 view = math::Matrix4::lookAt()
 
-        shader()->setUniformVec3("lightDir", lightDir);
-        shader()->setUniformVec3("lightColor", lightColor);
-        shader()->setUniformVec3("baseColor", mColor.toVec3());
-        shader()->setUniformFloat("ambientStrength", 0.2);
+        shader()->setUniformVec3("objectColor", mColor.toVec3());
     }
 }

@@ -30,6 +30,9 @@ namespace scorpion::components {
         Projection projection;
 
         void syncWithTransform();
+
+        math::Vec3 forward() const;
+        math::Vec3 right() const;
     };
 }
 
