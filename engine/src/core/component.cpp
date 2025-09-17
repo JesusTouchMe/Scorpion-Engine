@@ -5,8 +5,8 @@
 namespace scorpion {
     void RenderableComponent::beginShader() {
         if (mShader != nullptr) {
-            beginShader0();
             mShader->begin();
+            beginShader0();
         }
     }
 

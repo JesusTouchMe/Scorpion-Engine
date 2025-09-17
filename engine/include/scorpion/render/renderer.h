@@ -43,6 +43,9 @@ namespace scorpion::render {
     SCORPION_API void InitWindow(int width, int height, const char* title);
     SCORPION_API void CloseWindow();
 
+    SCORPION_API int GetWindowWidth();
+    SCORPION_API int GetWindowHeight();
+
     SCORPION_API SharedPtr<Shader> CompileShader(const char* vShaderCode, const char* fShaderCode);
 
     SCORPION_API bool IsCursorVisible();

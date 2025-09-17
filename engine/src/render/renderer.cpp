@@ -1,5 +1,7 @@
 // Copyright 2025 JesusTouchMe
 
+#include "scorpion/engine_std/camera.h"
+
 #include "scorpion/render/renderer.h"
 
 #include "scorpion/util/lazy.h"
@@ -209,6 +211,14 @@ namespace scorpion::render {
         ::CloseWindow();
     }
 
+    int GetWindowWidth() {
+        return ::GetScreenWidth();
+    }
+
+    int GetWindowHeight() {
+        return ::GetScreenHeight();
+    }
+
     SharedPtr<Shader> CompileShader(const char* vShaderCode, const char* fShaderCode) {
         static HashMap<String, WeakPtr<Shader>> cache;
         static std::mutex cacheMutex;
@@ -261,19 +271,58 @@ namespace scorpion::render {
     }
 
     void Begin3D(math::Vec3 position, math::Vec3 target, math::Vec3 up, float fovY, int projection) {
-        ::Camera3D rlCam = {
-            .position = { .x = position.x, .y = position.y, .z = position.z },
-            .target = { .x = target.x, .y = target.y, .z = target.z },
-            .up = { .x = up.x, .y = up.y, .z = up.z },
-            .fovy = fovY,
-            .projection = projection,
-        };
+        rlDrawRenderBatchActive();
 
-        ::BeginMode3D(rlCam);
+        rlMatrixMode(RL_PROJECTION);
+        rlPushMatrix();
+        rlLoadIdentity();
+
+        float aspect = static_cast<float>(GetScreenWidth()) / static_cast<float>(GetScreenHeight());
+
+        switch (static_cast<components::Camera::Projection>(projection)) {
+            case components::Camera::Projection::Perspective: {
+                double top = rlGetCullDistanceNear() * std::tan(math::Deg2Rad(fovY * 0.5));
+                double right = top * aspect;
+
+                rlFrustum(-right, right, -top, top, rlGetCullDistanceNear(), rlGetCullDistanceFar());
+                break;
+            }
+            case components::Camera::Projection::Orthographic: {
+                double top = fovY / 2.0;
+                double right = top * aspect;
+
+                rlOrtho(-right, right, -top, top, rlGetCullDistanceNear(), rlGetCullDistanceFar());
+
+                break;
+            }
+        }
+
+        rlMatrixMode(RL_MODELVIEW);
+        rlLoadIdentity();
+
+        math::Matrix4 view = math::Matrix4::lookAt(position, target, up);
+        rlMultMatrixf(view.m);
+
+        rlEnableDepthTest();
     }
 
     void End3D() {
-        ::EndMode3D();
+        rlDrawRenderBatchActive();
+
+        rlMatrixMode(RL_PROJECTION);
+        rlPopMatrix();
+
+        rlMatrixMode(RL_MODELVIEW);
+        rlLoadIdentity();
+
+        float scaleX = static_cast<float>(GetRenderWidth()) / static_cast<float>(GetScreenWidth());
+        float scaleY = static_cast<float>(GetRenderHeight()) / static_cast<float>(GetScreenHeight());
+
+        math::Matrix4 screenScale = math::Matrix4::scale({scaleX, scaleY, 1.0});
+
+        if (rlGetActiveFramebuffer() == 0) rlMultMatrixf(screenScale.m);
+
+        rlDisableDepthTest();
     }
 
     void ClearWindow() {
@@ -283,25 +332,24 @@ namespace scorpion::render {
     void DrawCube(math::Vec3 position, math::Vec3 size, math::Quat rotation, math::Color color) {
         rlPushMatrix();
 
-        rlTranslatef(position.x, position.y, position.z);
-
-        math::Matrix4 matrix = math::Matrix4::rotation(rotation);
+        math::Matrix4 matrix = math::Matrix4::translation(position) * math::Matrix4::rotation(rotation) * math::Matrix4::scale(size);
         rlMultMatrixf(matrix.m);
-
-        rlScalef(size.x, size.y, size.z);
 
         rlBegin(RL_TRIANGLES);
         rlColor4ub(color.r, color.g, color.b, color.a);
 
-        rlVertex3f(-0.5f, -0.5f, 0.5f);
-        rlVertex3f( 0.5f, -0.5f, 0.5f);
-        rlVertex3f( 0.5f,  0.5f, 0.5f);
+        // Front face (z+)
+        rlNormal3f(0.0f, 0.0f, 1.0f);
+        rlVertex3f(-0.5f, -0.5f,  0.5f);
+        rlVertex3f( 0.5f, -0.5f,  0.5f);
+        rlVertex3f( 0.5f,  0.5f,  0.5f);
 
-        rlVertex3f(-0.5f, -0.5f, 0.5f);
-        rlVertex3f( 0.5f,  0.5f, 0.5f);
-        rlVertex3f(-0.5f,  0.5f, 0.5f);
+        rlVertex3f(-0.5f, -0.5f,  0.5f);
+        rlVertex3f( 0.5f,  0.5f,  0.5f);
+        rlVertex3f(-0.5f,  0.5f,  0.5f);
 
-        // back face
+        // Back face (z-)
+        rlNormal3f(0.0f, 0.0f, -1.0f);
         rlVertex3f(-0.5f, -0.5f, -0.5f);
         rlVertex3f(-0.5f,  0.5f, -0.5f);
         rlVertex3f( 0.5f,  0.5f, -0.5f);
@@ -310,16 +358,18 @@ namespace scorpion::render {
         rlVertex3f( 0.5f,  0.5f, -0.5f);
         rlVertex3f( 0.5f, -0.5f, -0.5f);
 
-        // top face
-        rlVertex3f(-0.5f, 0.5f, -0.5f);
-        rlVertex3f(-0.5f, 0.5f,  0.5f);
-        rlVertex3f( 0.5f, 0.5f,  0.5f);
+        // Top face (y+)
+        rlNormal3f(0.0f, 1.0f, 0.0f);
+        rlVertex3f(-0.5f,  0.5f, -0.5f);
+        rlVertex3f(-0.5f,  0.5f,  0.5f);
+        rlVertex3f( 0.5f,  0.5f,  0.5f);
 
-        rlVertex3f(-0.5f, 0.5f, -0.5f);
-        rlVertex3f( 0.5f, 0.5f,  0.5f);
-        rlVertex3f( 0.5f, 0.5f, -0.5f);
+        rlVertex3f(-0.5f,  0.5f, -0.5f);
+        rlVertex3f( 0.5f,  0.5f,  0.5f);
+        rlVertex3f( 0.5f,  0.5f, -0.5f);
 
-        // bottom face
+        // Bottom face (y-)
+        rlNormal3f(0.0f, -1.0f, 0.0f);
         rlVertex3f(-0.5f, -0.5f, -0.5f);
         rlVertex3f( 0.5f, -0.5f, -0.5f);
         rlVertex3f( 0.5f, -0.5f,  0.5f);
@@ -328,7 +378,8 @@ namespace scorpion::render {
         rlVertex3f( 0.5f, -0.5f,  0.5f);
         rlVertex3f(-0.5f, -0.5f,  0.5f);
 
-        // right face
+        // Right face (x+)
+        rlNormal3f(1.0f, 0.0f, 0.0f);
         rlVertex3f(0.5f, -0.5f, -0.5f);
         rlVertex3f(0.5f,  0.5f, -0.5f);
         rlVertex3f(0.5f,  0.5f,  0.5f);
@@ -337,7 +388,8 @@ namespace scorpion::render {
         rlVertex3f(0.5f,  0.5f,  0.5f);
         rlVertex3f(0.5f, -0.5f,  0.5f);
 
-        // left face
+        // Left face (x-)
+        rlNormal3f(-1.0f, 0.0f, 0.0f);
         rlVertex3f(-0.5f, -0.5f, -0.5f);
         rlVertex3f(-0.5f, -0.5f,  0.5f);
         rlVertex3f(-0.5f,  0.5f,  0.5f);
@@ -348,31 +400,7 @@ namespace scorpion::render {
 
         rlEnd();
 
-        /*
-        rlBegin(RL_LINES);
-        rlColor4ub(0, 0, 0, 255);
-
-        math::Vec3 verts[8] = {
-            {-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f},
-            {0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, -0.5f},
-            {-0.5f, -0.5f, 0.5f}, {0.5f, -0.5f, 0.5f},
-            {0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}
-        };
-
-        int edges[12][2] = {
-            {0, 1}, {1, 2}, {2, 3}, {3, 0},
-            {4, 5}, {5, 6}, {6, 7}, {7, 4},
-            {0, 4}, {1, 5}, {2, 6}, {3, 7}
-        };
-
-        for (int i = 0; i < 12; i++) {
-            rlVertex3f(verts[edges[i][0]].x, verts[edges[i][0]].y, verts[edges[i][0]].z);
-            rlVertex3f(verts[edges[i][1]].x, verts[edges[i][1]].y, verts[edges[i][1]].z);
-        }
-
-        rlEnd();
-        */
-
         rlPopMatrix();
+
     }
 }

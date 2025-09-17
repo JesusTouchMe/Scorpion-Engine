@@ -12,41 +12,42 @@
 const char* vsSun = R"(
 #version 330
 
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aNormal;
+in vec3 vertexPosition;
+in vec3 vertexNormal;
 
-uniform mat4 mvp;
-uniform mat4 model;
+uniform mat4 mvp;      // model * view * projection
+uniform mat4 model;    // just the model matrix, for normals
 
-out vec3 FragPos;
-out vec3 Normal;
+out vec3 fragNormal;
+out vec3 fragPos;
 
 void main() {
-    FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal  = mat3(model) * aNormal;
-    gl_Position = mvp * vec4(aPos, 1.0);
+    fragPos = vec3(model * vec4(vertexPosition, 1.0));
+    fragNormal = mat3(transpose(inverse(model))) * vertexNormal;
+    gl_Position = mvp * vec4(vertexPosition, 1.0);
 }
 )";
 
 const char* fsSun = R"(
 #version 330
-in vec3 FragPos;
-in vec3 Normal;
-out vec4 FragColor;
 
-uniform vec3 lightDir;
+in vec3 fragNormal;
+in vec3 fragPos;
+
+uniform vec3 lightDir;     // normalized
 uniform vec3 lightColor;
+uniform vec3 ambientColor;
 uniform vec3 objectColor;
 
+out vec4 fragColor;
+
 void main() {
-    vec3 norm = normalize(Normal);
-    vec3 dir  = normalize(lightDir);
+    vec3 N = normalize(fragNormal);
+    vec3 L = normalize(-lightDir); // light shining *onto* surface
+    float diff = max(dot(N, L), 0.0);
 
-    float diff = max(dot(norm, dir), 0.0);
-    vec3 diffuse = diff * lightColor;
-    vec3 result = diffuse * objectColor;
-
-    FragColor = vec4(result, 1.0);
+    vec3 result = (ambientColor + lightColor * diff) * objectColor;
+    fragColor = vec4(result, 1.0);
 }
 )";
 
@@ -105,7 +106,6 @@ private:
         targetPos = targetPos.rotateByAxisAngle(right, angle);
 
         mCamera->position = mTransform->position = mCamera->target - targetPos;
-        //mCamera->up = mCamera->up.rotateByAxisAngle(right, angle);
     }
 };
 
@@ -121,13 +121,15 @@ int main() {
 
     SharedPtr<render::Shader> shader = render::CompileShader(vsSun, fsSun);
 
-    math::Vec3 lightDir = math::Vec3(10, 15, 15).normalized();
-    math::Vec3 lightColor = math::Vec3(1, 1, 0.9);
+    math::Vec3 lightDir = math::Vec3(-0.2f, -1.0f, -0.3f).normalized();
+    math::Vec3 lightColor = math::Vec3(1, 1, 1);
+    math::Vec3 ambientColor = math::Vec3(0.175f, 0.175f, 0.175f);
 
     shader->setUniformVec3("lightDir", lightDir);
     shader->setUniformVec3("lightColor", lightColor);
+    shader->setUniformVec3("ambientColor", ambientColor);
 
-    Actor* ground = actors::CreateCube(math::Vec3::zero, {10, 0.1, 10}, math::Quat::identity, math::Color::green);
+    Actor* ground = actors::CreateCube(math::Vec3::zero, {10, 0.001, 10}, math::Quat::identity, math::Color::green);
     Actor* cube = actors::CreateCube({0, 1, 0}, math::Vec3::one * 2, math::Quat::identity, math::Color::red);
 
     ground->applyShader(shader);

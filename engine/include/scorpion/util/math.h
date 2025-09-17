@@ -413,15 +413,17 @@ namespace scorpion::math {
 
         Matrix4 operator*(const Matrix4& other) const {
             Matrix4 result;
-            for (int row = 0; row < 4; ++row) {
-                for (int col = 0; col < 4; ++col) {
-                    result.m[col + row*4] =
-                        m[row*4 + 0] * other.m[col + 0] +
-                        m[row*4 + 1] * other.m[col + 4] +
-                        m[row*4 + 2] * other.m[col + 8] +
-                        m[row*4 + 3] * other.m[col + 12];
+
+            for (int col = 0; col < 4; ++col) {
+                for (int row = 0; row < 4; ++row) {
+                    result.m[col * 4 + row] =
+                          m[0 * 4 + row] * other.m[col * 4 + 0]
+                        + m[1 * 4 + row] * other.m[col * 4 + 1]
+                        + m[2 * 4 + row] * other.m[col * 4 + 2]
+                        + m[3 * 4 + row] * other.m[col * 4 + 3];
                 }
             }
+
             return result;
         }
 
@@ -432,7 +434,7 @@ namespace scorpion::math {
         }
 
         static Matrix4 translation(const Vec3& translation) {
-            Matrix4 matrix;
+            Matrix4 matrix = identity();
             matrix.m[12] = translation.x;
             matrix.m[13] = translation.y;
             matrix.m[14] = translation.z;
@@ -440,7 +442,7 @@ namespace scorpion::math {
         }
 
         static Matrix4 scale(const Vec3& scale) {
-            Matrix4 matrix;
+            Matrix4 matrix = identity();
             matrix.m[0] = scale.x;
             matrix.m[5] = scale.y;
             matrix.m[10] = scale.z;
@@ -448,7 +450,7 @@ namespace scorpion::math {
         }
 
         static Matrix4 rotation(const Quat& rotation) {
-            Matrix4 matrix = identity();
+            Matrix4 result = identity();
 
             float xx = rotation.x * rotation.x;
             float yy = rotation.y * rotation.y;
@@ -460,75 +462,70 @@ namespace scorpion::math {
             float wy = rotation.w * rotation.y;
             float wz = rotation.w * rotation.z;
 
-            matrix.m[0] = 1.0f - 2.0f * (yy + zz);
-            matrix.m[1] = 2.0f * (xy + wz);
-            matrix.m[2] = 2.0f * (xz - wy);
-            matrix.m[3] = 0.0f;
+            result.m[0] = 1.0f - 2.0f * (yy + zz);
+            result.m[4] = 2.0f * (xy + wz);
+            result.m[8] = 2.0f * (xz - wy);
+            result.m[12] = 0.0f;
 
-            matrix.m[4] = 2.0f * (xy - wz);
-            matrix.m[5] = 1.0f - 2.0f * (xx + zz);
-            matrix.m[6] = 2.0f * (yz + wx);
-            matrix.m[7] = 0.0f;
+            result.m[1] = 2.0f * (xy - wz);
+            result.m[5] = 1.0f - 2.0f * (xx + zz);
+            result.m[9] = 2.0f * (yz + wx);
+            result.m[13] = 0.0f;
 
-            matrix.m[8]  = 2.0f * (xz + wy);
-            matrix.m[9]  = 2.0f * (yz - wx);
-            matrix.m[10] = 1.0f - 2.0f * (xx + yy);
-            matrix.m[11] = 0.0f;
+            result.m[2] = 2.0f * (xz + wy);
+            result.m[6] = 2.0f * (yz - wx);
+            result.m[10] = 1.0f - 2.0f * (xx + yy);
+            result.m[14] = 0.0f;
 
-            matrix.m[12] = 0.0f;
-            matrix.m[13] = 0.0f;
-            matrix.m[14] = 0.0f;
-            matrix.m[15] = 1.0f;
+            result.m[3] = 0.0f;
+            result.m[7] = 0.0f;
+            result.m[11] = 0.0f;
+            result.m[15] = 1.0f;
 
-            return matrix;
+            return result;
         }
 
         static Matrix4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up) {
-            Matrix4 result;
+            Matrix4 result = identity();
 
-            float length = 0.0f;
-            float ilength = 0.0f;
+            Vec3 f = (target - eye).normalized();
+            Vec3 s = f.cross(up).normalized();
+            Vec3 u = s.cross(f);
 
-            Vec3 vz = eye - target;
-            Vec3 v = vz;
+            result.m[0] = s.x;
+            result.m[4] = s.y;
+            result.m[8] = s.z;
 
-            length = v.length();
-            if (length == 0.0f) length = 1.0f;
+            result.m[1] = u.x;
+            result.m[5] = u.y;
+            result.m[9] = u.z;
 
-            ilength = 1.0f / length;
-            vz.x *= ilength;
-            vz.y *= ilength;
-            vz.z *= ilength;
+            result.m[2] = -f.x;
+            result.m[6] = -f.y;
+            result.m[10] = -f.z;
 
-            Vec3 vx = up.cross(vz);
-            v = vx;
+            result.m[12] = -s.dot(eye);
+            result.m[13] = -u.dot(eye);
+            result.m[14] = f.dot(eye);
 
-            length = v.length();
-            if (length == 0.0f) length = 1.0f;
+            return result;
+        }
 
-            ilength = 1.0f / length;
-            vx.x *= ilength;
-            vx.y *= ilength;
-            vx.z *= ilength;
 
-            Vec3 vy = vz.cross(vx);
 
-            result.m[0] = vx.x;
-            result.m[1] = vy.x;
-            result.m[2] = vz.x;
-            result.m[3] = 0.0f;
-            result.m[4] = vx.y;
-            result.m[5] = vy.y;
-            result.m[6] = vz.y;
-            result.m[7] = 0.0f;
-            result.m[8] = vx.z;
-            result.m[9] = vy.z;
-            result.m[10] = vz.z;
-            result.m[11] = 0.0f;
-            result.m[12] = -vx.dot(eye);
-            result.m[13] = -vy.dot(eye);
-            result.m[14] = -vz.dot(eye);
-            result.m[15] = 1.0f;
+        static Matrix4 perspective(float fovY, float aspect, float nearPlane, float farPlane) {
+            float f = 1.0f / std::tan(fovY * 0.5f);
+
+            Matrix4 result = identity();
+
+            result.m[0] = f / aspect;
+            result.m[5] = f;
+            result.m[10] = (farPlane + nearPlane) / (nearPlane - farPlane);
+            result.m[14] = (2.0f * farPlane * nearPlane) / (nearPlane - farPlane);
+            result.m[11] = -1.0f;
+            result.m[15] = 0.0f;
+
+            return result;
         }
     };
 
