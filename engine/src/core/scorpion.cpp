@@ -8,26 +8,20 @@
 
 namespace scorpion {
     struct EngineCore {
-        int targetFPS;
-        int targetTPS;
-
-        double renderInterval;
-        double updateInterval;
-
         Timer<> updateTimer;
         Timer<> renderTimer;
 
         HashMap<uint32_t, UniquePtr<Scene>> scenes;
-        Scene* activeScene;
+        Scene* activeScene = nullptr;
+
+        Vector<std::function<void(UpdateHookHandle&)>> updateHooks;
 
         void setTargetFPS(int fps) {
-            targetFPS = fps;
-            renderInterval = 1.0 / fps;
+            renderTimer.reset(1.0 / fps);
         }
 
         void setTargetTPS(int tps) {
-            targetTPS = tps;
-            updateInterval = 1.0 / tps;
+            updateTimer.reset(1.0 / tps);
         }
 
         Scene* createScene(uint32_t id) {
@@ -43,57 +37,82 @@ namespace scorpion {
             activeScene = scenes.at(id).get();
         }
 
+        void addUpdateHook(std::function<void(UpdateHookHandle&)> hook) {
+            updateHooks.push_back(std::move(hook));
+        }
+
         bool shouldRun() {
             return !WindowShouldClose();
         }
 
-        bool shouldUpdate() {
-            if (targetTPS == 0) return true;
-
-            updateTimer.update(updateTimer.deltaTime());
-            return updateTimer.getAccumulator() >= updateInterval;
+        void tickTimers() {
+            updateTimer.tick();
+            renderTimer.tick();
         }
 
-        bool shouldRender() {
-            if (targetFPS == 0) return true;
+        void waitForUpdateOrRender() {
+            if (updateTimer.getTarget() == 0.0 && renderTimer.getTarget() == 0.0) return;
 
-            renderTimer.update(renderTimer.deltaTime());
-            if (renderTimer.getAccumulator() >= renderInterval) {
-                renderTimer.update(-renderInterval);
-                return true;
+            auto now = updateTimer.getCurrentTime();
+            auto nextUpdate = updateTimer.getTarget() > 0.0 ? updateTimer.nextDue() : now;
+            auto nextRender = renderTimer.getTarget() > 0.0 ? renderTimer.nextDue() : now;
+
+            if (nextUpdate < nextRender) {
+                updateTimer.wait();
+            } else {
+                renderTimer.wait();
             }
-            return false;
         }
 
         void update() {
-            auto tick = [this] {
-                if (activeScene != nullptr) activeScene->update(updateInterval);
+            auto tick = [this](double dt) {
+                for (auto it = updateHooks.begin(); it != updateHooks.end();) {
+                    UpdateHookHandle handle;
+                    (*it)(handle);
+
+                    if (handle.mUnregistered) {
+                        it = updateHooks.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+
+                if (activeScene != nullptr) activeScene->update(dt);
             };
 
-            if (targetTPS == 0) {
-                tick();
-                return;
-            }
-
-            while (updateTimer.getAccumulator() >= updateInterval) {
-                tick();
-
-                updateTimer.update(-updateInterval);
+            if (updateTimer.getTarget() == 0.0) {
+                tick(updateTimer.getDelta());
+            } else if (updateTimer.getCurrentTime() >= updateTimer.nextDue()) {
+                tick(updateTimer.getTarget());
             }
         }
 
         void render() {
-            if (activeScene != nullptr) activeScene->render();
+            auto tick = [this] {
+                if (activeScene != nullptr) activeScene->render();
+            };
+
+            // each, i know this can be turned into a or, but we tryna match with update()
+            if (renderTimer.getTarget() == 0.0) {
+                tick();
+            } else if (renderTimer.getCurrentTime() >= renderTimer.nextDue()) {
+                tick();
+            }
         }
     };
 
     static EngineCore core;
 
+    void UpdateHookHandle::unregister() {
+        mUnregistered = true;
+    }
+
     void Run() {
-        //TODO: make a function that blocks until the next thing (update/render) should run
         while (ShouldRun()) {
-            if (ShouldUpdate()) Update();
-            if (ShouldRender()) Render();
+            TickTimers();
+            WaitForUpdateOrRender();
+            Update();
+            Render();
         }
     }
 
@@ -125,20 +144,24 @@ namespace scorpion {
         actor->getScene()->removeActor(actor);
     }
 
+    void AddUpdateHook(std::function<void(UpdateHookHandle&)> hook) {
+        core.addUpdateHook(std::move(hook));
+    }
+
     bool ShouldRun() {
         return core.shouldRun();
     }
 
-    bool ShouldUpdate() {
-        return core.shouldUpdate();
+    void TickTimers() {
+        core.tickTimers();
+    }
+
+    void WaitForUpdateOrRender() {
+        core.waitForUpdateOrRender();
     }
 
     void Update() {
         core.update();
-    }
-
-    bool ShouldRender() {
-        return core.shouldRender();
     }
 
     void Render() {

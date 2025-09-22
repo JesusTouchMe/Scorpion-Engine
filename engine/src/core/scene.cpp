@@ -2,7 +2,7 @@
 
 #include "scorpion/core/scene.h"
 
-#include "scorpion/render/renderer.h"
+#include "scorpion/hal/renderer.h"
 
 namespace scorpion {
     void Scene::update(double dt) {
@@ -23,9 +23,7 @@ namespace scorpion {
         render::ClearWindow();
 
         if (mActiveCamera != nullptr) {
-            mActiveCamera->syncWithTransform();
-
-            render::Begin3D(mActiveCamera->position, mActiveCamera->target, mActiveCamera->up, mActiveCamera->fovY, static_cast<int>(mActiveCamera->projection));
+            render::Begin3D(mActiveCamera->getPosition(), mActiveCamera->getTarget(), mActiveCamera->getUp(), mActiveCamera->getFovY(), static_cast<int>(mActiveCamera->getProjection()));
             for (auto& actor: mActors) {
                 if (actor->isActive()) actor->renderPass(RenderableComponent::Layer::World3D);
             }

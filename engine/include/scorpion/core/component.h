@@ -7,7 +7,7 @@
 
 #include "scorpion/core/api.h"
 
-#include "scorpion/render/renderer.h"
+#include "scorpion/hal/renderer.h"
 
 namespace scorpion {
     class Actor;

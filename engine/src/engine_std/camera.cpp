@@ -6,21 +6,73 @@
 #include "scorpion/engine_std/transform.h"
 
 namespace scorpion::components {
-    void Camera::syncWithTransform() {
-        Transform* transform = getOwner()->getComponent<Transform>();
-        if (transform == nullptr) return;
+    Camera::Camera(Actor* owner, math::Vec3 position, math::Vec3 target, math::Vec3 up, float fovY, Projection projection)
+        : Component(owner)
+        , mTransform(nullptr)
+        , mPosition(position)
+        , mTarget(target)
+        , mUp(up)
+        , mFovY(fovY)
+        , mProjection(projection) {}
 
-        position = transform->position;
+    void Camera::onStart() {
+        mTransform = getOwner()->getComponent<Transform>();
     }
 
-    math::Vec3 Camera::forward() const {
-        return (target - position).normalized();
+    void Camera::onUpdate(double dt) {
+        if (mTransform == nullptr) return;
+
+        mPosition = mTransform->getPosition();
     }
 
-    math::Vec3 Camera::right() const {
-        math::Vec3 forward = this->forward();
-        math::Vec3 up = this->up.normalized();
+    math::Vec3 Camera::getPosition() const {
+        return mPosition;
+    }
 
-        return forward.cross(up).normalized();
+    math::Vec3 Camera::getTarget() const {
+        return mTarget;
+    }
+
+    math::Vec3 Camera::getUp() const {
+        return mUp;
+    }
+
+    math::Vec3 Camera::getForward() const {
+        return (mTarget - mPosition);
+    }
+
+    math::Vec3 Camera::getRight() const {
+        math::Vec3 forward = this->getForward();
+        math::Vec3 up = this->mUp;
+
+        return forward.cross(up);
+    }
+
+    float Camera::getFovY() const {
+        return mFovY;
+    }
+
+    Camera::Projection Camera::getProjection() const {
+        return mProjection;
+    }
+
+    void Camera::setPosition(math::Vec3 position) {
+        mPosition = position;
+    }
+
+    void Camera::setTarget(math::Vec3 target) {
+        mTarget = target;
+    }
+
+    void Camera::setUp(math::Vec3 up) {
+        mUp = up;
+    }
+
+    void Camera::setFovY(float fovY) {
+        mFovY = fovY;
+    }
+
+    void Camera::setProjection(Projection projection) {
+        mProjection = projection;
     }
 }

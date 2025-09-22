@@ -5,7 +5,18 @@
 
 #include "scorpion/core/scene.h"
 
+#include <functional>
+
 namespace scorpion {
+    class UpdateHookHandle {
+    friend struct EngineCore;
+    public:
+        void unregister();
+
+    private:
+        bool mUnregistered = false;
+    };
+
     SCORPION_API void Run();
 
     SCORPION_API void SetTargetFPS(int fps);
@@ -18,13 +29,16 @@ namespace scorpion {
     SCORPION_API Actor* CreateActor();
     SCORPION_API void DestroyActor(Actor* actor);
 
-    // The following functions are exposed in case the user needs specific stuff in the game loop
+    // The following functions are exposed in case the user needs more control over the game loop
+
+    SCORPION_API void AddUpdateHook(std::function<void(UpdateHookHandle&)> hook);
 
     SCORPION_API bool ShouldRun();
 
-    SCORPION_API bool ShouldUpdate();
+    SCORPION_API void TickTimers();
+    SCORPION_API void WaitForUpdateOrRender();
+
     SCORPION_API void Update();
-    SCORPION_API bool ShouldRender();
     SCORPION_API void Render();
 }
 

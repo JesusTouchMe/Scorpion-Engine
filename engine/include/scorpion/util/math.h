@@ -202,6 +202,18 @@ namespace scorpion::math {
 
             return result;
         }
+
+        Vec3 lerp(const Vec3& other, float amount) const {
+            return {
+                x + amount * (other.x - x),
+                y + amount * (other.y - y),
+                z + amount * (other.z - z),
+            };
+        }
+
+        float distanceTo(const Vec3& to) const {
+            return (to - *this).length();
+        }
     };
 
     inline const Vec3 Vec3::zero = {0, 0, 0};
@@ -388,9 +400,17 @@ namespace scorpion::math {
         }
 
         Quat normalized() const {
-            float len = std::sqrt(w * w + x * x + y * y + z * z);
+            float len = length();
             if (len == 0) return identity;
             return {w / len, x / len, y / len, z / len};
+        }
+
+        float lengthSquared() const {
+            return w * w + x * x + y * y + z * z;
+        }
+
+        float length() const {
+            return std::sqrt(w * w + x * x + y * y + z * z);
         }
 
         static Quat fromAxisAngle(const Vec3& axis, float angleRad) {
@@ -399,10 +419,108 @@ namespace scorpion::math {
             return Quat(std::cos(half), axis.x * s, axis.y * s, axis.z * s).normalized();
         }
 
+        static Quat fromTo(const Vec3& from, const Vec3& to) {
+            Quat result;
+
+            float cos2Theta = from.dot(to);
+            Vec3 cross = from.cross(to);
+
+            result.x = cross.x;
+            result.y = cross.y;
+            result.z = cross.z;
+            result.w = 1.0f + cos2Theta;
+
+            Quat q = result;
+            float length = result.length();
+            if (length == 0.0f) length = 1.0f;
+            float ilength = 1.0f / length;
+
+            result.x = q.x * ilength;
+            result.y = q.y * ilength;
+            result.z = q.z * ilength;
+            result.w = q.w * ilength;
+
+            return result;
+        }
+
         static Quat fromMatrix(const Matrix4& matrix);
     };
 
     inline const Quat Quat::identity = {1, 0, 0, 0};
+
+    struct Matrix3 {
+        float m[9]{};
+
+        Matrix3() {
+            for (int i = 0; i < 9; i++) m[i] = 0;
+        }
+
+        Matrix3 operator*(const Matrix3& other) const {
+            Matrix3 result;
+
+            for (int col = 0; col < 3; col++) {
+                for (int row = 0; row < 3; row++) {
+                    for (int k = 0; k < 3; k++) {
+                        result.m[col * 3 + row] += m[k * 3 + row] * other.m[col * 3 + k];
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        Vec3 operator*(const Vec3& vec) const {
+            return {
+                m[0] * vec.x + m[3] * vec.y + m[6] * vec.z,
+                m[1] * vec.x + m[4] * vec.y + m[7] * vec.z,
+                m[2] * vec.x + m[5] * vec.y + m[8] * vec.z
+            };
+        }
+
+        Matrix3 transpose() const {
+            Matrix3 result = {};
+
+            for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 3; col++) {
+                    result.m[col * 3 + row] = m[row * 3 + col];
+                }
+            }
+
+            return result;
+        }
+
+        Matrix3 inverse() const {
+            Matrix3 result;
+            float det =
+                    m[0] * (m[4] * m[8] - m[7] * m[5]) -
+                    m[3] * (m[1] * m[8] - m[7] * m[2]) +
+                    m[6] * (m[1] * m[5] - m[4] * m[2]);
+
+            if (det == 0.0f) return identity();
+
+            float invDet = 1.0f / det;
+
+            result.m[0] = (m[4] * m[8] - m[7] * m[5]) * invDet;
+            result.m[3] = -(m[3] * m[8] - m[6] * m[5]) * invDet;
+            result.m[6] = (m[3] * m[7] - m[6] * m[4]) * invDet;
+
+            result.m[1] = -(m[1] * m[8] - m[7] * m[2]) * invDet;
+            result.m[4] = (m[0] * m[8] - m[6] * m[2]) * invDet;
+            result.m[7] = -(m[0] * m[7] - m[6] * m[1]) * invDet;
+
+            result.m[2] = (m[1] * m[5] - m[4] * m[2]) * invDet;
+            result.m[5] = -(m[0] * m[5] - m[3] * m[2]) * invDet;
+            result.m[8] = (m[0] * m[4] - m[3] * m[1]) * invDet;
+
+            return result;
+        }
+
+        static Matrix3 identity() {
+            Matrix3 result;
+            result.m[0] = result.m[4] = result.m[8] = 1.0f;
+            return result;
+        }
+    };
 
     struct Matrix4 {
         float m[16]{};
@@ -414,8 +532,8 @@ namespace scorpion::math {
         Matrix4 operator*(const Matrix4& other) const {
             Matrix4 result;
 
-            for (int col = 0; col < 4; ++col) {
-                for (int row = 0; row < 4; ++row) {
+            for (int col = 0; col < 4; col++) {
+                for (int row = 0; row < 4; row++) {
                     result.m[col * 4 + row] =
                           m[0 * 4 + row] * other.m[col * 4 + 0]
                         + m[1 * 4 + row] * other.m[col * 4 + 1]
@@ -428,9 +546,9 @@ namespace scorpion::math {
         }
 
         static Matrix4 identity() {
-            Matrix4 matrix;
-            matrix.m[0] = matrix.m[5] = matrix.m[10] = matrix.m[15] = 1;
-            return matrix;
+            Matrix4 result;
+            result.m[0] = result.m[5] = result.m[10] = result.m[15] = 1;
+            return result;
         }
 
         static Matrix4 translation(const Vec3& translation) {
@@ -510,8 +628,6 @@ namespace scorpion::math {
 
             return result;
         }
-
-
 
         static Matrix4 perspective(float fovY, float aspect, float nearPlane, float farPlane) {
             float f = 1.0f / std::tan(fovY * 0.5f);

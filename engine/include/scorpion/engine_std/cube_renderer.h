@@ -5,6 +5,8 @@
 
 #include "scorpion/core/component.h"
 
+#include "scorpion/engine_std/transform.h"
+
 #include "scorpion/util/math.h"
 
 namespace scorpion::components {
@@ -12,12 +14,17 @@ namespace scorpion::components {
     public:
         CubeRenderer(Actor* actor, math::Color color);
 
+        void onStart() override;
         void onRender() override;
+
+        math::Color getColor() const;
 
     protected:
         void beginShader0() override;
 
     private:
+        Transform* mTransform;
+
         math::Color mColor;
     };
 }

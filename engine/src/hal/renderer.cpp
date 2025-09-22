@@ -2,7 +2,7 @@
 
 #include "scorpion/engine_std/camera.h"
 
-#include "scorpion/render/renderer.h"
+#include "scorpion/hal/renderer.h"
 
 #include "scorpion/util/lazy.h"
 
@@ -326,7 +326,8 @@ namespace scorpion::render {
     }
 
     void ClearWindow() {
-        ::ClearBackground(WHITE);
+        rlClearColor(255, 255, 255, 255);
+        rlClearScreenBuffers();
     }
 
     void DrawCube(math::Vec3 position, math::Vec3 size, math::Quat rotation, math::Color color) {

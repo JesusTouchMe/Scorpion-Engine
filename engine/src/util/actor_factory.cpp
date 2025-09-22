@@ -48,7 +48,7 @@ namespace scorpion::actors {
     Actor* CreateActorWithTransform(math::Vec3 position, math::Vec3 size, math::Quat rotation, Scene* scene) {
         CHECK_SCENE(scene);
 
-        Actor* actor = scene->addActor<Actor>();
+        Actor* actor = CreateActor();
         actor->addComponent<Transform>(position, size, rotation);
 
         return actor;

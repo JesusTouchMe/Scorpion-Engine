@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(raylib)
 
 set(SOURCES
     src/core/scorpion.cpp
-    src/render/renderer.cpp
+    src/hal/renderer.cpp
     src/foundation/memory/allocator.c
         src/core/actor.cpp
         src/core/scene.cpp
@@ -26,13 +26,14 @@ set(SOURCES
     src/engine_std/cube_renderer.cpp
     src/util/actor_factory.cpp
     src/core/component.cpp
-        src/render/input.cpp)
+    src/hal/input.cpp
+    src/engine_std/physics_body.cpp)
 
 set(HEADERS
     include/scorpion/core/scorpion.h
     include/scorpion/core/api.h
     include/scorpion/util/timer.h
-    include/scorpion/render/renderer.h
+    include/scorpion/hal/renderer.h
     include/scorpion/foundation/memory/allocator.h
         include/scorpion/core/actor.h
         include/scorpion/core/component.h
@@ -44,7 +45,8 @@ set(HEADERS
     include/scorpion/engine_std/camera.h
     include/scorpion/engine_std/cube_renderer.h
     include/scorpion/util/actor_factory.h
-        include/scorpion/render/input.h)
+    include/scorpion/hal/input.h
+    include/scorpion/engine_std/physics_body.h)
 
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})
 

@@ -5,6 +5,8 @@
 
 #include "scorpion/core/component.h"
 
+#include "scorpion/engine_std/transform.h"
+
 #include "scorpion/util/math.h"
 
 namespace scorpion::components {
@@ -15,24 +17,33 @@ namespace scorpion::components {
             Orthographic,
         };
 
-        Camera(Actor* owner, math::Vec3 position, math::Vec3 target, math::Vec3 up, float fov_y, Projection projection)
-            : Component(owner)
-            , position(position)
-            , target(target)
-            , up(up)
-            , fovY(fov_y)
-            , projection(projection) {}
+        Camera(Actor* owner, math::Vec3 position, math::Vec3 target, math::Vec3 up, float fovY, Projection projection);
 
-        math::Vec3 position;
-        math::Vec3 target;
-        math::Vec3 up;
-        float fovY;
-        Projection projection;
+        void onStart() override;
+        void onUpdate(double dt) override;
 
-        void syncWithTransform();
+        math::Vec3 getPosition() const;
+        math::Vec3 getTarget() const;
+        math::Vec3 getUp() const;
+        math::Vec3 getForward() const;
+        math::Vec3 getRight() const;
+        float getFovY() const;
+        Projection getProjection() const;
 
-        math::Vec3 forward() const;
-        math::Vec3 right() const;
+        void setPosition(math::Vec3 position);
+        void setTarget(math::Vec3 target);
+        void setUp(math::Vec3 up);
+        void setFovY(float fovY);
+        void setProjection(Projection projection);
+
+    private:
+        Transform* mTransform;
+
+        math::Vec3 mPosition;
+        math::Vec3 mTarget;
+        math::Vec3 mUp;
+        float mFovY;
+        Projection mProjection;
     };
 }
 

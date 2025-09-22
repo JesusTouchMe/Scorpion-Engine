@@ -1,6 +1,6 @@
 // Copyright 2025 JesusTouchMe
 
-#include "scorpion/render/input.h"
+#include "scorpion/hal/input.h"
 
 #include <raylib.h>
 
